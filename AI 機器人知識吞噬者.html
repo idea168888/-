@@ -1,0 +1,575 @@
+import IPython
+
+html_code = """
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  body {
+    background-color: #0f172a;
+    color: #38bdf8;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0; /* Removed padding from body */
+    height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+  }
+  /* New container to control overall content width */
+  #game-wrapper {
+    max-width: 360px; /* Match canvas width */
+    padding: 10px; /* Add padding here instead of body */
+    box-sizing: border-box; /* Include padding in the max-width */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center children horizontally within the wrapper */
+  }
+  h1 { font-size: 20px; margin: 5px; color: #f8fafc; text-shadow: 0 0 10px #38bdf8; text-align: center;} /* Adjusted from 22px */
+  #scoreBoard {
+    font-size: 12px; /* Adjusted from 14px */
+    font-weight: bold;
+    margin-bottom: 15px;
+    background: #1e293b;
+    padding: 10px 20px;
+    border-radius: 10px;
+    /* border: 2px solid #38bdf8; */ /* Removed border */
+    /* box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); */ /* Removed box-shadow */
+    text-align: center;
+    /* To make items sit closer in scoreBoard */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #scoreBoard button { /* New style for buttons */
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 4px 8px; /* Adjusted padding for smaller font */
+    font-size: 12px; /* Adjusted from 14px */
+    font-weight: bold;
+    border-radius: 10px; /* More rounded */
+    cursor: pointer;
+    margin-left: 15px; /* Further increased from 10px */
+    margin-top: 0; /* Override default button margin-top */
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  #scoreBoard button:last-child { /* Add margin-right to the last button for separation */
+    margin-right: 15px; /* Further increased from 10px */
+  }
+  #scoreBoard button#resetButton { /* Specific rule for the reset button */
+    margin-right: 20px; /* Further increased margin to the right of the reset button */
+  }
+  #scoreBoard span {
+    margin-right: 15px; /* Further increased from 10px */
+  }
+  #scoreBoard span:last-of-type {
+    margin-right: 0; /* No margin after the last score element before buttons */
+  }
+
+  #scoreBoard button:hover {
+    background: #7dd3fc;
+    box-shadow: 0 0 8px rgba(125, 211, 252, 0.7); /* Subtle glow on hover */
+  }
+  canvas {
+    background-color: #020617;
+    border: 2px solid #38bdf8;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+    max-width: 100%; /* Changed from 95vw to 100% to fit container */
+    height: auto; /* Maintain aspect ratio */
+    transition: transform 0.1s;
+  }
+  #game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15, 23, 42, 0.95);
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid #ef4444;
+    color: #ef4444;
+    text-align: center;
+    display: none;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+  }
+  #game-over h2 { margin: 0 0 15px 0; font-size: 20px; } /* Adjusted from 24px */
+  #game-over button {
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 10px 20px; /* Adjusted from 12px 24px */
+    font-size: 16px; /* Adjusted from 18px */
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  #game-over button:hover { background: #7dd3fc; }
+  .controls-hint {
+    font-size: 12px; /* Adjusted from 14px */
+    margin-top: 15px;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.5;
+  }
+  /* Style for the slider container */
+  .sensitivity-setting {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px; /* Space between elements */
+  }
+  .sensitivity-setting input[type="range"] {
+    width: 100px; /* Adjust width as needed */
+    -webkit-appearance: none; /* Remove default styling */
+    appearance: none;
+    background: #1e293b; /* Track color */
+    outline: none;
+    border-radius: 5px;
+    height: 6px;
+  }
+  .sensitivity-setting input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #38bdf8; /* Thumb color */
+    cursor: pointer;
+    margin-top: -5px; /* Center thumb vertically */
+    box-shadow: 0 0 5px rgba(56, 189, 248, 0.7);
+  }
+  .sensitivity-setting input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #38bdf8;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(56, 189, 248, 0.7);
+  }
+</style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <h1>AI 機器人知識吞噬者</h1>
+    <p style="font-size: 10px; margin-top: 5px; color: #94a3b8; text-align: center;">
+      💡知識: +5分 ⭐ 超級知識: +10分 🧪 隱形藥水: +20分 🐛 毒蛇: -5分
+    </p>
+    <div id="scoreBoard"><button id="resetButton" onclick="resetGame()">&#x21BA;</button>🏆<span id="highScore">0</span>🧠<span id="score">0</span>⚡<span id="speed">1</span><button id="pauseResumeButton" onclick="togglePause()">&#x23F8;</button></div>
+
+    <!-- New Audio Elements -->
+    <audio id="backgroundMusic" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+    <audio id="eatSound" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"></audio>
+
+    <div style="position: relative;">
+      <canvas id="gameCanvas" width="360" height="360"></canvas>
+      <div id="game-over">
+        <h2>系統崩潰！</h2>
+        <p>最終智慧指數: <span id="final-score">0</span></p>
+        <button onclick="resetGame()">重新啟動系統</button>
+      </div>
+    </div>
+
+    <div class="controls-hint">
+      🖥️ <b>桌機</b>：使用「上下左右」方向鍵控制<br>
+      📱 <b>手機</b>：在遊戲畫面上直接「滑動 (Swipe)」控制
+    </div>
+    <div class="sensitivity-setting">
+      <b>滑動靈敏度:</b>
+      <input type="range" id="swipeSensitivitySlider" min="10" max="50" value="20" step="5">
+      <span id="sensitivityValue">20</span>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const gridSize = 20;
+  const tileCount = canvas.width / gridSize;
+
+  let snake = [{ x: 8, y: 8 }];
+  let dx = 0;
+  let dy = 0;
+  let food = { x: 5, y: 5 };
+  let superFood = { x: -1, y: -1 }; // New item: Super Knowledge
+  let potion = { x: -1, y: -1 };    // New item: Invisible Potion
+  let poison = { x: 12, y: 12 };
+
+  let score = 0;
+  let highScore = 0; // New variable for high score
+  let speedLevel = 1;
+  let baseSpeed = 300; // Increased base speed for slower movement
+  let gameLoopTimeout;
+  let gameOver = false;
+  let hasStarted = false; // Prevent moving before first key/swipe
+  let musicStarted = false; // New flag to control music playback
+  let isPaused = false; // New variable for pause state
+  let swipeSensitivity = 20; // Default swipe sensitivity
+
+  // Audio Elements
+  const backgroundMusic = document.getElementById('backgroundMusic');
+  const eatSound = document.getElementById('eatSound');
+
+  // Set initial volume for background music
+  if (backgroundMusic) {
+      backgroundMusic.volume = 0.3;
+  }
+
+  document.addEventListener('keydown', changeDirection);
+
+  // Mobile Touch Event Listeners
+  let touchStartX = 0;
+  let touchStartY = 0;
+  canvas.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+      e.preventDefault(); // Prevent scrolling
+  }, {passive: false});
+
+  canvas.addEventListener('touchend', e => {
+      let touchEndX = e.changedTouches[0].screenX;
+      let touchEndY = e.changedTouches[0].screenY;
+      handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+      e.preventDefault();
+  }, {passive: false});
+
+  canvas.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+
+  // Swipe sensitivity slider event listener
+  document.getElementById('swipeSensitivitySlider').addEventListener('input', (event) => {
+    swipeSensitivity = parseInt(event.target.value);
+    document.getElementById('sensitivityValue').innerText = swipeSensitivity;
+  });
+
+  function handleSwipe(startX, startY, endX, endY) {
+      if(gameOver) return;
+      hasStarted = true;
+      if (!musicStarted && backgroundMusic) { // Start music on first interaction
+          backgroundMusic.play().catch(e => console.log("Background music autoplay prevented:", e));
+          musicStarted = true;
+      }
+      const diffX = endX - startX;
+      const diffY = endY - startY;
+      const currentThreshold = swipeSensitivity; // Use the dynamic sensitivity here
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+          // Horizontal Swipe
+          if (diffX > currentThreshold && dx === 0) { dx = 1; dy = 0; } // Right
+          else if (diffX < -currentThreshold && dx === 0) { dx = -1; dy = 0; } // Left
+      } else {
+          // Vertical Swipe
+          if (diffY > currentThreshold && dy === 0) { dx = 0; dy = 1; } // Down
+          else if (diffY < -currentThreshold && dy === 0) { dx = 0; dy = -1; } // Up
+      }
+  }
+
+  function changeDirection(event) {
+    if(gameOver) return;
+    const LEFT_KEY = 37; const UP_KEY = 38; const RIGHT_KEY = 39; const DOWN_KEY = 40;
+    const keyPressed = event.keyCode;
+
+    // Check if arrow keys were pressed
+    if ([LEFT_KEY, UP_KEY, RIGHT_KEY, DOWN_KEY].includes(keyPressed)) {
+        hasStarted = true;
+        if (!musicStarted && backgroundMusic) { // Start music on first interaction
+            backgroundMusic.play().catch(e => console.log("Background music autoplay prevented:", e));
+            musicStarted = true;
+        }
+        // Prevent scrolling with arrow keys
+        event.preventDefault();
+    }
+
+    if (keyPressed === LEFT_KEY && dx === 0) { dx = -1; dy = 0; }
+    if (keyPressed === UP_KEY && dy === 0) { dx = 0; dy = -1; }
+    if (keyPressed === RIGHT_KEY && dx === 0) { dx = 1; dy = 0; }
+    if (keyPressed === DOWN_KEY && dy === 0) { dx = 0; dy = 1; }
+  }
+
+  function drawGame() {
+    if (gameOver) return;
+    if (isPaused) return; // If paused, just return, don't schedule next frame
+
+    clearCanvas();
+    if(hasStarted) {
+        moveSnake();
+        checkCollision(); // Check for self-collision after snake moves
+    }
+
+    if (gameOver) {
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('snakeHighScore', highScore);
+        }
+        document.getElementById("game-over").style.display = "block";
+        document.getElementById("final-score").innerText = score;
+        if (backgroundMusic) backgroundMusic.pause(); // Pause music on game over
+        return;
+    }
+
+    drawFood();
+    drawSuperFood(); // Draw Super Knowledge
+    drawPotion();    // Draw Invisible Potion
+    drawPoison();
+    drawSnake();
+
+    // Calculate speed based on speed level (faster as level up)
+    let currentSpeed = Math.max(60, baseSpeed - (speedLevel * 15));
+    gameLoopTimeout = setTimeout(drawGame, currentSpeed);
+  }
+
+  function togglePause() {
+    const pauseResumeButton = document.getElementById('pauseResumeButton');
+    if (isPaused) {
+      isPaused = false;
+      pauseResumeButton.innerHTML = '&#x23F8;'; // Pause symbol
+      if (musicStarted && backgroundMusic) {
+          backgroundMusic.play().catch(e => console.log("Background music autoplay prevented:", e));
+      }
+      drawGame(); // Resume game loop
+    }
+    else {
+      isPaused = true;
+      pauseResumeButton.innerHTML = '&#x25B6;'; // Play symbol
+      clearTimeout(gameLoopTimeout); // Stop the game loop
+      if (backgroundMusic) backgroundMusic.pause();
+    }
+  }
+
+  function clearCanvas() {
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function generateNewCoordinates(excludeCoords = []) {
+      let newX, newY;
+      let valid = false;
+      while (!valid) {
+          newX = Math.floor(Math.random() * tileCount);
+          newY = Math.floor(Math.random() * tileCount);
+          valid = true;
+
+          // Check against snake parts
+          for (let part of snake) {
+              if (part.x === newX && part.y === newY) {
+                  valid = false;
+                  break;
+              }
+          }
+          if (!valid) continue;
+
+          // Check against excluded coordinates (other items)
+          for (let exCoord of excludeCoords) {
+              if (exCoord.x === newX && exCoord.y === newY) {
+                  valid = false;
+                  break;
+              }
+          }
+      }
+      return { x: newX, y: newY };
+  }
+
+  function placeItem(itemObj) {
+      const allItems = [food, superFood, potion, poison];
+      const otherActiveItems = allItems.filter(item => item !== itemObj); // Exclude itself
+      const newCoords = generateNewCoordinates(otherActiveItems);
+      itemObj.x = newCoords.x;
+      itemObj.y = newCoords.y;
+  }
+
+  function moveSnake() {
+    const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+    // Infinite Borders! (Wrap around)
+    if (head.x < 0) head.x = tileCount - 1;
+    if (head.x >= tileCount) head.x = 0;
+    if (head.y < 0) head.y = tileCount - 1;
+    if (head.y >= tileCount) head.y = 0;
+
+    snake.unshift(head);
+
+    let itemEaten = false;
+    let shouldMovePoison = false; // Flag to indicate if poison should be relocated
+
+    // Eaten Knowledge (💡)
+    if (head.x === food.x && head.y === food.y) {
+        score += 5;
+        speedLevel = Math.min(10, speedLevel + 1); // Minor speed increase, max speed level 10
+        updateUI();
+        placeItem(food);
+        shouldMovePoison = true;
+        itemEaten = true;
+        if (eatSound) { eatSound.currentTime = 0; eatSound.play(); } // Play sound effect
+    }
+    // Eaten Super Knowledge (⭐)
+    else if (head.x === superFood.x && head.y === superFood.y) {
+        score += 10;
+        speedLevel = Math.min(10, speedLevel + 2); // Moderate speed increase, max speed level 10
+        updateUI();
+        placeItem(superFood);
+        shouldMovePoison = true;
+        itemEaten = true;
+        if (eatSound) { eatSound.currentTime = 0; eatSound.play(); } // Play sound effect
+    }
+    // Eaten Invisible Potion (🧪)
+    else if (head.x === potion.x && head.y === potion.y) {
+        score += 20;
+        speedLevel = Math.min(10, speedLevel + 3); // Significant speed increase, max speed level 10
+        updateUI();
+        placeItem(potion);
+        shouldMovePoison = true;
+        itemEaten = true;
+        if (eatSound) { eatSound.currentTime = 0; eatSound.play(); } // Play sound effect
+    }
+    // Eaten Poison (🐛)
+    else if (head.x === poison.x && head.y === poison.y) {
+        score = Math.max(0, score - 5); // Updated score
+        speedLevel = Math.max(1, speedLevel - 1); // Slows down, min speed level 1
+        updateUI();
+
+        // Shrink snake: one for normal movement, one for penalty
+        if (snake.length > 1) snake.pop();
+        if(snake.length > 1) snake.pop();
+        else gameOver = true; // Game over if only head remains and shrinks
+
+        // Visual Glitch/Shake Effect
+        canvas.style.transform = "translate(8px, 8px) scale(0.98)";
+        setTimeout(() => canvas.style.transform = "translate(0, 0) scale(1)", 150);
+
+        placeItem(poison);
+        itemEaten = true;
+    }
+
+    if (snake.length === 0) { // If snake is completely gone due to poison
+        gameOver = true;
+    }
+
+    if (!itemEaten) {
+        snake.pop(); // Normal movement (remove tail)
+    }
+
+    if (shouldMovePoison) {
+        placeItem(poison); // Relocate poison if a positive item was eaten
+    }
+  }
+
+  function updateUI() {
+      document.getElementById("score").innerText = score;
+      document.getElementById("speed").innerText = speedLevel;
+      document.getElementById("highScore").innerText = highScore; // Update high score display
+  }
+
+  function drawSnake() {
+    ctx.font = "18px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    snake.forEach((part, index) => {
+      let emoji = index === 0 ? "🤖" : "🟩";
+      // Slightly pulse the head
+      if(index === 0) {
+          ctx.font = "20px Arial";
+      }
+      else {
+          ctx.font = "16px Arial";
+      }
+      ctx.fillText(emoji, part.x * gridSize + gridSize/2, part.y * gridSize + gridSize/2);
+    });
+  }
+
+  function drawFood() {
+    ctx.font = "18px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("💡", food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2);
+  }
+
+  function drawSuperFood() {
+    if (superFood.x !== -1) { // Only draw if on screen
+      ctx.font = "18px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("⭐", superFood.x * gridSize + gridSize/2, superFood.y * gridSize + gridSize/2);
+    }
+  }
+
+  function drawPotion() {
+    if (potion.x !== -1) { // Only draw if on screen
+      ctx.font = "18px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("🧪", potion.x * gridSize + gridSize/2, potion.y * gridSize + gridSize/2);
+    }
+  }
+
+  function drawPoison() {
+    ctx.font = "18px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("🐛", poison.x * gridSize + gridSize/2, poison.y * gridSize + gridSize/2);
+  }
+
+  function checkCollision() {
+    // Only die if it hits itself
+    for (let i = 1; i < snake.length; i++) {
+      if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+        gameOver = true;
+      }
+    }
+  }
+
+  function resetGame() {
+    snake = [{ x: 8, y: 8 }];
+    dx = 0; dy = 0;
+    score = 0;
+    speedLevel = 1;
+    gameOver = false;
+    hasStarted = false;
+    musicStarted = false; // Reset music flag
+    isPaused = false; // Ensure game is not paused on reset
+    if (backgroundMusic) {
+        backgroundMusic.pause(); // Stop music on reset
+        backgroundMusic.currentTime = 0; // Rewind music
+    }
+    document.getElementById("pauseResumeButton").innerHTML = "&#x23F8;"; // Reset button to Pause symbol
+    highScore = parseInt(localStorage.getItem('snakeHighScore')) || 0; // Load high score from local storage
+    updateUI();
+    document.getElementById("game-over").style.display = "none";
+    // Initialize all items
+    placeItem(food);
+    placeItem(superFood);
+    placeItem(potion);
+    placeItem(poison);
+    clearTimeout(gameLoopTimeout);
+
+    // Reset swipe sensitivity slider
+    swipeSensitivity = 20; // Reset sensitivity to default
+    const slider = document.getElementById('swipeSensitivitySlider');
+    const sensitivityValueSpan = document.getElementById('sensitivityValue');
+    if (slider) {
+      slider.value = swipeSensitivity;
+    }
+    if (sensitivityValueSpan) {
+      sensitivityValueSpan.innerText = swipeSensitivity;
+    }
+
+    drawGame();
+  }
+
+  // Start initialization
+  resetGame(); // Call resetGame to initialize high score on load
+</script>
+</body>
+</html>
+"""
+display(IPython.display.HTML(html_code))
